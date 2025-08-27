@@ -10,6 +10,7 @@ import {
 } from '@mui/material';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteIcon from '@mui/icons-material/Delete';
+import CalculateIcon from '@mui/icons-material/Calculate';
 
 import {
     fetchProductById,
@@ -24,6 +25,8 @@ import {
     type ProductPayload,
     type ProductRelationPayload
 } from '../api/productsApi';
+// ✅ 1. Importamos lo necesario para obtener el valor del dólar.
+import { fetchDolar, type Dolar } from '../api/dolarApi';
 import type { Proveedor, TipoProducto, Producto, RelatedProductResult } from '../types/Producto';
 import CreateProveedorDialog from '../components/CreateProveedorDialog';
 import CreateTipoProductoDialog from '../components/CreateTipoProductoDialog';
@@ -66,6 +69,9 @@ function ProductFormPage() {
     const [costoSinIva, setCostoSinIva] = useState('0'); // Costo en USD
     const [costoPesos, setCostoPesos] = useState('0');   // Costo en ARS
 
+    // ✅ 2. Nuevo estado para la calculadora de ARS a USD
+    const [arsToUsdInput, setArsToUsdInput] = useState('');
+
     // --- Queries ---
     const { data: productToEdit, isLoading: isLoadingProduct } = useQuery({
         queryKey: ['product', id],
@@ -81,6 +87,18 @@ function ProductFormPage() {
         queryFn: () => fetchRelatedProducts(id!),
         enabled: isEditMode,
     });
+
+    // ✅ 3. Query para obtener el valor del dólar
+    const { data: dolarData, isLoading: isLoadingDolar } = useQuery<Dolar[]>({
+        queryKey: ['dolar'],
+        queryFn: fetchDolar,
+        staleTime: 1000 * 60 * 60, // Cache de 1 hora para no sobrecargar la API
+        refetchOnWindowFocus: false,
+    });
+
+    // Extraemos el valor del dólar para usarlo fácilmente
+    const dolarValue = useMemo(() => dolarData?.[0]?.precio, [dolarData]);
+
 
     // --- Effect para popular el formulario en modo edición ---
     useEffect(() => {
@@ -285,6 +303,24 @@ function ProductFormPage() {
         }
     };
 
+    // ✅ 4. Función para manejar el cálculo de ARS a USD
+    const handleCalculateUsdFromArs = () => {
+        if (!dolarValue || dolarValue <= 0) {
+            toast.error('No se pudo obtener un valor de dólar válido para calcular.');
+            return;
+        }
+        const arsValue = parseFloat(arsToUsdInput);
+        if (isNaN(arsValue) || arsValue <= 0) {
+            toast.error('Ingrese un monto válido en pesos.');
+            return;
+        }
+
+        const usdValue = arsValue / dolarValue;
+        // Actualizamos el estado del costo en USD con el valor calculado
+        setCostoSinIva(usdValue.toFixed(4)); // Usamos 4 decimales para mayor precisión
+        toast.success(`Costo USD calculado: $${usdValue.toFixed(4)}`);
+    };
+
     const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         if (!selectedProveedor || !selectedTipo) {
@@ -362,7 +398,7 @@ function ProductFormPage() {
                     <form onSubmit={handleSubmit}>
                         <Grid container spacing={3}>
                             <Grid item xs={12} sm={6}>
-                                <TextField required fullWidth name="codigo_producto" label="Código del Producto" value={codigo} onChange={(e) => setCodigo(e.target.value)} disabled={isProcessing} />
+                                <TextField fullWidth name="codigo_producto" label="Código del Producto" value={codigo} onChange={(e) => setCodigo(e.target.value)} disabled={isProcessing} />
                             </Grid>
                             <Grid item xs={12} sm={6}>
                                 <TextField required fullWidth name="descripcion" label="Descripción" value={descripcion} onChange={(e) => setDescripcion(e.target.value)} disabled={isProcessing} />
@@ -417,7 +453,39 @@ function ProductFormPage() {
                                     />
                                 </Grid>
                             )}
-                            {/* ✅ CORRECCIÓN: El TextField duplicado que estaba aquí fue eliminado. */}
+
+                            {/* ✅ 5. Nueva sección para la calculadora, solo visible si no es costo fijo */}
+                            {!costoFijo && (
+                                <Grid item xs={12} sm={6}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <TextField
+                                            label="Calcular desde ARS"
+                                            size="small"
+                                            type="number"
+                                            value={arsToUsdInput}
+                                            onChange={(e) => setArsToUsdInput(e.target.value)}
+                                            disabled={isProcessing || isLoadingDolar}
+                                            InputProps={{ startAdornment: <Typography sx={{ mr: 1 }}>$</Typography> }}
+                                        />
+                                        <Tooltip title={!dolarValue ? "Obteniendo valor del dólar..." : `Calcular usando dólar a $${dolarValue}`}>
+                                            <span>
+                                                <Button
+                                                    variant="outlined"
+                                                    size="small"
+                                                    onClick={handleCalculateUsdFromArs}
+                                                    disabled={isProcessing || isLoadingDolar || !dolarValue || !arsToUsdInput}
+                                                    startIcon={<CalculateIcon />}
+                                                >
+                                                    Calcular
+                                                </Button>
+                                            </span>
+                                        </Tooltip>
+                                    </Box>
+                                    <FormHelperText>
+                                        Ingrese un monto en pesos para convertirlo a costo en dólares.
+                                    </FormHelperText>
+                                </Grid>
+                            )}
 
                             <Grid item xs={12} sm={6} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Autocomplete

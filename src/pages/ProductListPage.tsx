@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { useQuery, useIsMutating, useMutation, useQueryClient, keepPreviousData, onlineManager } from '@tanstack/react-query';
 import { useNavigate, Link as RouterLink } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
@@ -86,6 +86,12 @@ function ProductListPage() {
 
     const { data: proveedores } = useQuery({ queryKey: ['proveedores'], queryFn: fetchProveedores });
     const { data: tiposProducto } = useQuery({ queryKey: ['tiposProducto'], queryFn: fetchTiposProducto });
+
+    const proveedorMap = useMemo(() => {
+        if (!proveedores) return new Map<number, string>();
+        return new Map(proveedores.map(p => [p.id, p.nombre]));
+    }, [proveedores]);
+
 
     const pendingMutations = useIsMutating({ mutationKey: ['createProduct'] }) + useIsMutating({ mutationKey: ['updateProduct'] }) + useIsMutating({ mutationKey: ['deleteProduct'] }) + useIsMutating({ mutationKey: ['registrarVenta'] });
 
@@ -351,24 +357,31 @@ function ProductListPage() {
                 <Table size="small">
                     <TableHead>
                         <TableRow>
-                            <TableCell padding="checkbox">
-                                <Checkbox
-                                    color="primary"
-                                    indeterminate={numSelected > 0 && numSelected < rowCount}
-                                    checked={rowCount > 0 && numSelected === rowCount}
-                                    onChange={handleSelectAll}
-                                    inputProps={{ 'aria-label': 'seleccionar todos los productos' }}
-                                />
-                            </TableCell>
+                            {isAdmin && (
+                                <TableCell padding="checkbox">
+                                    <Checkbox
+                                        color="primary"
+                                        indeterminate={numSelected > 0 && numSelected < rowCount}
+                                        checked={rowCount > 0 && numSelected === rowCount}
+                                        onChange={handleSelectAll}
+                                        inputProps={{ 'aria-label': 'seleccionar todos los productos' }}
+                                    />
+                                </TableCell>
+                            )}
                             <TableCell sx={{ width: '5%' }}>ID</TableCell>
                             <TableCell>Código</TableCell>
                             <TableCell>Descripción</TableCell>
+                            <TableCell>Proveedor</TableCell>
                             <TableCell align="right">Stock</TableCell>
-                            <TableCell align="right">Costo (USD)</TableCell>
-                            <TableCell align="right">% Ganancia</TableCell>
+                            {isAdmin && (
+                                <>
+                                    <TableCell align="right">Costo Base</TableCell>
+                                    <TableCell align="right">% Ganancia</TableCell>
+                                </>
+                            )}
                             <TableCell align="right">Precio Venta (ARS)</TableCell>
                             <TableCell align="center">Fecha Ingreso</TableCell>
-                            <TableCell align="center">Estado</TableCell>
+                            {isAdmin && <TableCell align="center">Estado</TableCell>}
                             {isAdmin && <TableCell align="center">Acciones</TableCell>}
                             <TableCell align="center">Añadir</TableCell>
                         </TableRow>
@@ -379,36 +392,57 @@ function ProductListPage() {
                                 const isPending = typeof product.id === 'string';
                                 const isOutOfStock = product.cantidad <= 0;
                                 const isSelected = selectedProducts.has(product.id);
+                                const isCostoFijo = product.costoFijo;
 
                                 return (
                                     <TableRow
                                         key={product.id}
                                         hover
-                                        selected={isSelected}
+                                        selected={isAdmin ? isSelected : undefined}
                                         sx={{ opacity: isPending ? 0.6 : 1 }}
                                     >
-                                        <TableCell padding="checkbox">
-                                            <Checkbox
-                                                color="primary"
-                                                checked={isSelected}
-                                                onChange={() => handleSelectOne(product.id)}
-                                                inputProps={{ 'aria-labelledby': `product-checkbox-${product.id}` }}
-                                            />
-                                        </TableCell>
+                                        {isAdmin && (
+                                            <TableCell padding="checkbox">
+                                                <Checkbox
+                                                    color="primary"
+                                                    checked={isSelected}
+                                                    onChange={() => handleSelectOne(product.id)}
+                                                    inputProps={{ 'aria-labelledby': `product-checkbox-${product.id}` }}
+                                                />
+                                            </TableCell>
+                                        )}
                                         <TableCell sx={{ fontWeight: 'bold' }}>{String(product.id).padStart(5, '0')}</TableCell>
                                         <TableCell>{product.codigo_producto}</TableCell>
                                         <TableCell>{product.descripcion}</TableCell>
+                                        <TableCell>{proveedorMap.get(product.proveedorId) ?? 'N/D'}</TableCell>
                                         <TableCell align="right" sx={{ color: isOutOfStock ? 'error.light' : 'inherit', fontWeight: isOutOfStock ? 'bold' : 'normal' }}>
                                             {product.cantidad}
                                         </TableCell>
-                                        <TableCell align="right">${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(product.costo_dolares ?? 0)}</TableCell>
-                                        <TableCell align="right">{(product.porcentaje_ganancia ?? 0)}%</TableCell>
+                                        {isAdmin && (
+                                            <>
+                                                <TableCell align="right">
+                                                    {isCostoFijo ? (
+                                                        // ✅ MEJORA: Usando float para un posicionamiento más directo.
+                                                        <Box sx={{ float: 'right' }}>
+                                                            <Tooltip title="Este producto tiene un costo fijo en ARS">
+                                                                <Chip label="Fijo ARS" size="small" variant="outlined" />
+                                                            </Tooltip>
+                                                        </Box>
+                                                    ) : (
+                                                        `$${new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(product.costo_dolares ?? 0)}`
+                                                    )}
+                                                </TableCell>
+                                                <TableCell align="right">{(product.porcentaje_ganancia ?? 0)}%</TableCell>
+                                            </>
+                                        )}
                                         <TableCell align="right">${new Intl.NumberFormat('es-AR').format(product.precio_publico ?? 0)}</TableCell>
                                         <TableCell align="center">{new Date(product.fecha_ingreso).toLocaleDateString('es-AR')}</TableCell>
-                                        <TableCell align="center">
-                                            {isPending && <Tooltip title="Pendiente de sincronización"><Chip icon={<CloudUploadIcon />} label="Pendiente" size="small" color="warning" /></Tooltip>}
-                                            {isOutOfStock && !isPending && <Tooltip title="Stock en cero o negativo"><Chip label="Revisar Stock" size="small" color="error" /></Tooltip>}
-                                        </TableCell>
+                                        {isAdmin && (
+                                            <TableCell align="center">
+                                                {isPending && <Tooltip title="Pendiente de sincronización"><Chip icon={<CloudUploadIcon />} label="Pendiente" size="small" color="warning" /></Tooltip>}
+                                                {isOutOfStock && !isPending && <Tooltip title="Stock en cero o negativo"><Chip label="Revisar Stock" size="small" color="error" /></Tooltip>}
+                                            </TableCell>
+                                        )}
                                         {isAdmin && (
                                             <TableCell align="center">
                                                 <IconButton aria-label="acciones" onClick={(e) => handleMenuOpen(e, product.id)} disabled={isPending}>
@@ -435,14 +469,14 @@ function ProductListPage() {
                             })
                         ) : (
                             <TableRow>
-                                <TableCell colSpan={isAdmin ? 12 : 11} align="center">{debouncedSearchTerm || proveedorFilter || tipoFilter ? 'No se encontraron productos que coincidan con los filtros.' : 'No hay productos para mostrar.'}</TableCell>
+                                <TableCell colSpan={isAdmin ? 13 : 8} align="center">{debouncedSearchTerm || proveedorFilter || tipoFilter ? 'No se encontraron productos que coincidan con los filtros.' : 'No hay productos para mostrar.'}</TableCell>
                             </TableRow>
                         )}
                     </TableBody>
                 </Table>
             </TableContainer>
 
-            {numSelected > 0 && (
+            {isAdmin && numSelected > 0 && (
                 <Tooltip title={`Generar PDF con ${numSelected} producto(s) seleccionado(s)`}>
                     <Fab
                         color="primary"
@@ -491,10 +525,17 @@ function ProductListPage() {
                                 <ListItem><ListItemText primary="Costo Fijo" secondary={selectedProductForDetails.costoFijo ? 'Sí' : 'No'} /></ListItem>
                                 <ListItem><ListItemText primary="Stock" secondary={selectedProductForDetails.cantidad} /></ListItem>
                                 <ListItem><ListItemText primary="IVA Aplicado" secondary={`${(selectedProductForDetails.iva ?? 0) * 100}%`} /></ListItem>
-                                <ListItem><ListItemText primary="Costo (USD)" secondary={`$${(selectedProductForDetails.costo_dolares ?? 0).toFixed(2)}`} /></ListItem>
-                                <ListItem><ListItemText primary="Costo (ARS)" secondary={`$${(selectedProductForDetails.costo_pesos ?? 0).toFixed(2)}`} /></ListItem>
-                                <ListItem><ListItemText primary="Precio sin IVA (USD)" secondary={`$${(selectedProductForDetails.precio_sin_iva ?? 0).toFixed(2)}`} /></ListItem>
-                                <ListItem><ListItemText primary="Precio Público (USD)" secondary={`$${(selectedProductForDetails.precio_publico_us ?? 0).toFixed(3)}`} /></ListItem>
+
+                                {selectedProductForDetails.costoFijo ? (
+                                    <ListItem><ListItemText primary="Costo Fijo (ARS)" secondary={`$${(selectedProductForDetails.costo_pesos ?? 0).toFixed(2)}`} /></ListItem>
+                                ) : (
+                                    <>
+                                        <ListItem><ListItemText primary="Costo (USD)" secondary={`$${(selectedProductForDetails.costo_dolares ?? 0).toFixed(2)}`} /></ListItem>
+                                        <ListItem><ListItemText primary="Precio sin IVA (USD)" secondary={`$${(selectedProductForDetails.precio_sin_iva ?? 0).toFixed(2)}`} /></ListItem>
+                                        <ListItem><ListItemText primary="Precio Público (USD)" secondary={`$${(selectedProductForDetails.precio_publico_us ?? 0).toFixed(3)}`} /></ListItem>
+                                    </>
+                                )}
+
                                 <ListItem><ListItemText primary="Precio Público (ARS)" secondary={`$${new Intl.NumberFormat('es-AR').format(selectedProductForDetails.precio_publico ?? 0)}`} /></ListItem>
                                 <ListItem><ListItemText primary="Precio sin redondear (ARS)" secondary={`$${new Intl.NumberFormat('es-AR').format(selectedProductForDetails.precio_sin_redondear ?? 0)}`} /></ListItem>
                                 <ListItem><ListItemText primary="Fecha de Ingreso" secondary={new Date(selectedProductForDetails.fecha_ingreso).toLocaleDateString('es-AR')} /></ListItem>
