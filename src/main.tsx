@@ -21,17 +21,11 @@ const queryClient = new QueryClient({
             gcTime: 1000 * 60 * 60 * 24,
         },
         mutations: {
-            // ✅ CORRECCIÓN: Esta es la lógica correcta para reintentos y modo offline.
             retry: (_failureCount, error) => {
-                // La clave es que para los errores de red, SIEMPRE debemos devolver `true`
-                // para que React Query mantenga la mutación en estado 'pending'.
-                // El `onlineManager` se encargará de pausarla y reanudarla.
                 if (error.message.includes('Network Error') || error.message.includes('Failed to fetch')) {
                     return true;
                 }
 
-                // Para cualquier otro tipo de error (ej: 401 Unauthorized, 404 Not Found, 500 Server Error),
-                // no queremos reintentar, ya que probablemente no se solucionará solo.
                 return false;
             },
         },

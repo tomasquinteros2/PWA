@@ -10,7 +10,6 @@ import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useState } from 'react';
 
-// Asumimos que tienes una función `deleteTipoProducto` en tu API
 import { fetchTiposProducto, deleteTipoProducto } from '../api/productsApi';
 import type { TipoProducto } from '../types/Producto';
 import { useAuth } from '../hooks/useAuth';
@@ -18,8 +17,8 @@ import { useAuth } from '../hooks/useAuth';
 export default function RubroListPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
-    const { role } = useAuth(); // ✅ 2. Obtén el rol del usuario
-    const isAdmin = role === 'ADMIN'; // ✅ 3. Crea una variable booleana
+    const { role } = useAuth();
+    const isAdmin = role === 'ADMIN';
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -63,7 +62,6 @@ export default function RubroListPage() {
         <Container>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', my: 4 }}>
                 <Typography variant="h4">Rubros</Typography>
-                {/* ✅ 4. Renderizado condicional del botón "Nuevo" */}
                 {isAdmin && (
                     <Button variant="contained" onClick={() => navigate('/rubros/nuevo')}>
                         Nuevo Rubro
@@ -76,7 +74,6 @@ export default function RubroListPage() {
                         <TableRow>
                             <TableCell>ID</TableCell>
                             <TableCell>Nombre</TableCell>
-                            {/* ✅ 5. Renderizado condicional de la cabecera "Acciones" */}
                             {isAdmin && <TableCell align="right">Acciones</TableCell>}
                         </TableRow>
                     </TableHead>
@@ -85,7 +82,6 @@ export default function RubroListPage() {
                             <TableRow key={rubro.id} hover>
                                 <TableCell>{rubro.id}</TableCell>
                                 <TableCell>{rubro.nombre}</TableCell>
-                                {/* ✅ 6. Renderizado condicional de la celda de acciones */}
                                 {isAdmin && (
                                     <TableCell align="right">
                                         <IconButton onClick={() => navigate(`/rubros/editar/${rubro.id}`)} aria-label="editar">

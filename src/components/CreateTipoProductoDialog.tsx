@@ -21,7 +21,7 @@ export default function CreateTipoProductoDialog({ open, onClose }: CreateTipoPr
         mutationFn: createTipoProducto,
         onSuccess: (data) => {
             toast.success(`Tipo de producto "${data.nombre}" creado con éxito.`);
-            onClose(data); // Devuelve el nuevo tipo de producto
+            onClose(data);
         },
         onError: (error) => {
             toast.error(`No se pudo crear el tipo de producto: ${error.message}`);

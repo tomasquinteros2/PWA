@@ -21,8 +21,6 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 const CART_STORAGE_KEY = 'ecopila-cart';
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
-    // ✅ 2. Leemos el estado inicial desde localStorage.
-    // Esto se ejecuta solo una vez, cuando el componente se monta por primera vez.
     const [cartItems, setCartItems] = useState<CartItem[]>(() => {
         try {
             const storedItems = localStorage.getItem(CART_STORAGE_KEY);
@@ -33,7 +31,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         }
     });
 
-    // ✅ 3. Usamos useEffect para guardar el carrito en localStorage cada vez que cambie.
     useEffect(() => {
         try {
             localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cartItems));
@@ -48,17 +45,14 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             const existingItem = prevItems.find(item => item.product.id === product.id);
 
             if (existingItem) {
-                // Si el producto ya está en el carrito, simplemente incrementa la cantidad.
                 return prevItems.map(item =>
                     item.product.id === product.id
                         ? { ...item, quantity: item.quantity + 1 }
                         : item
                 );
             }
-            // Si es un producto nuevo, lo añade al carrito con cantidad 1.
             return [...prevItems, { product, quantity: 1 }];
         });
-        // Damos feedback al usuario de que la acción fue exitosa.
         toast.success(`${product.descripcion} añadido al carrito.`);
     };
 
@@ -71,7 +65,6 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
         setCartItems(prevItems => {
             return prevItems.map(item =>
                 item.product.id === productId
-                    // Solo nos aseguramos de que la cantidad no sea menor a 1.
                     ? { ...item, quantity: Math.max(1, quantity) }
                     : item
             );

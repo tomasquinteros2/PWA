@@ -12,7 +12,7 @@ import PointOfSaleIcon from '@mui/icons-material/PointOfSale';
 import BusinessIcon from '@mui/icons-material/Business';
 import CategoryIcon from '@mui/icons-material/Category';
 import LogoutIcon from '@mui/icons-material/Logout';
-import MenuIcon from '@mui/icons-material/Menu'; // ✅ 1. Importamos el ícono de menú
+import MenuIcon from '@mui/icons-material/Menu';
 import DolarDisplay from './DolarDisplay';
 import ConnectionStatusIndicator from './ConnectionStatusIndicator';
 
@@ -21,7 +21,6 @@ function AppLayout() {
     const navigate = useNavigate();
     const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
 
-    // ✅ 2. Estado y handlers para el menú hamburguesa
     const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
     const isMenuOpen = Boolean(anchorEl);
 
@@ -64,7 +63,6 @@ function AppLayout() {
             <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
                 <AppBar position="static">
                     <Toolbar>
-                        {/* ✅ 3. Menú hamburguesa para pantallas pequeñas (móviles/tablets) */}
                         <Box sx={{ display: { xs: 'flex', md: 'none' }, mr: 1 }}>
                             <IconButton
                                 size="large"
@@ -100,7 +98,6 @@ function AppLayout() {
                             />
                         </Box>
 
-                        {/* ✅ 4. Botones de texto para pantallas grandes (escritorio) */}
                         <Box sx={{ flexGrow: 1, display: { xs: 'none', md: 'flex' }, justifyContent: 'center', gap: 1 }}>
                             {menuItems.map((item) => (
                                 <Button
@@ -116,7 +113,6 @@ function AppLayout() {
                             ))}
                         </Box>
 
-                        {/* ✅ 5. Íconos de la derecha (siempre visibles) */}
                         <Box sx={{ display: 'flex', alignItems: 'center' }}>
                             <DolarDisplay />
                             <ConnectionStatusIndicator />

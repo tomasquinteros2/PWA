@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'react-hot-toast';
 import { Container, Paper, Typography, TextField, Button, Box, CircularProgress } from '@mui/material';
-// ✅ 1. Importa los tipos necesarios
 import { fetchTipoProductoById, createTipoProducto, updateTipoProducto, type TipoProductoPayload } from '../api/productsApi';
 import type { TipoProducto } from '../types/Producto';
 
@@ -28,7 +27,6 @@ export default function RubroFormPage() {
         }
     }, [rubroToEdit]);
 
-    // ✅ 2. Especifica los tipos para useMutation
     const mutation = useMutation<TipoProducto, Error, TipoProductoPayload>({
         mutationFn: (payload: TipoProductoPayload) =>
             isEditMode ? updateTipoProducto({ id: id!, payload }) : createTipoProducto(payload),
@@ -42,7 +40,6 @@ export default function RubroFormPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // ✅ 3. Ahora `mutate` sabe que espera un TipoProductoPayload
         mutation.mutate({ nombre });
     };
 

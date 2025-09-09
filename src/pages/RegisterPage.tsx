@@ -66,7 +66,7 @@ function RegisterPage() {
         }
 
         const payload: RegisterPayload = {
-            username: formData.username.trim(), // Enviamos el nombre de usuario sin espacios extra
+            username: formData.username.trim(),
             password: formData.password,
             authorities: ['USER'],
         };
@@ -111,7 +111,6 @@ function RegisterPage() {
                         value={formData.password}
                         onChange={handleChange}
                         disabled={mutation.isPending}
-                        // ✅ 5. Feedback visual para la contraseña
                         error={isPasswordError}
                         helperText={isPasswordError ? "Debe tener al menos 6 caracteres" : ""}
                     />

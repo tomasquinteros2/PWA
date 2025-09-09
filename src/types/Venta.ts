@@ -9,7 +9,7 @@ export interface VentaItem {
 export interface Venta {
     id: number;
     numeroComprobante: string;
-    fechaVenta: string; // Viene como un string en formato ISO 8601
+    fechaVenta: string;
     totalVenta: number;
     items: VentaItem[];
 }

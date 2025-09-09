@@ -25,7 +25,6 @@ import {
     type ProductPayload,
     type ProductRelationPayload
 } from '../api/productsApi';
-// ✅ 1. Importamos lo necesario para obtener el valor del dólar.
 import { fetchDolar, type Dolar } from '../api/dolarApi';
 import type { Proveedor, TipoProducto, Producto, RelatedProductResult } from '../types/Producto';
 import CreateProveedorDialog from '../components/CreateProveedorDialog';
@@ -36,7 +35,6 @@ const ivaOptions = [
     { value: 0.105, label: '10.5% (Bienes de Capital)' },
 ];
 
-// Contextos para las actualizaciones optimistas
 type ProductMutationContext = {
     previousProducts?: Producto[];
     previousProduct?: Producto;
@@ -51,7 +49,6 @@ function ProductFormPage() {
     const { id } = useParams<{ id: string }>();
     const isEditMode = Boolean(id);
 
-    // --- State del Formulario ---
     const [codigo, setCodigo] = useState('');
     const [descripcion, setDescripcion] = useState('');
     const [cantidad, setCantidad] = useState('1');
@@ -69,7 +66,6 @@ function ProductFormPage() {
     const [costoSinIva, setCostoSinIva] = useState('0'); // Costo en USD
     const [costoPesos, setCostoPesos] = useState('0');   // Costo en ARS
 
-    // ✅ 2. Nuevo estado para la calculadora de ARS a USD
     const [arsToUsdInput, setArsToUsdInput] = useState('');
 
     // --- Queries ---
@@ -88,7 +84,6 @@ function ProductFormPage() {
         enabled: isEditMode,
     });
 
-    // ✅ 3. Query para obtener el valor del dólar
     const { data: dolarData, isLoading: isLoadingDolar } = useQuery<Dolar[]>({
         queryKey: ['dolar'],
         queryFn: fetchDolar,
@@ -96,11 +91,9 @@ function ProductFormPage() {
         refetchOnWindowFocus: false,
     });
 
-    // Extraemos el valor del dólar para usarlo fácilmente
     const dolarValue = useMemo(() => dolarData?.[0]?.precio, [dolarData]);
 
 
-    // --- Effect para popular el formulario en modo edición ---
     useEffect(() => {
         if (isEditMode && productToEdit && proveedores && tiposProducto) {
             setCodigo(productToEdit.codigo_producto);
@@ -123,7 +116,7 @@ function ProductFormPage() {
         }
     }, [productToEdit, isEditMode, proveedores, tiposProducto]);
 
-    // --- Mutaciones ---
+
     const createMutation = useMutation<Producto, Error, ProductPayload, ProductMutationContext>({
         mutationFn: createProduct,
         onMutate: async (newProductPayload) => {
@@ -303,7 +296,6 @@ function ProductFormPage() {
         }
     };
 
-    // ✅ 4. Función para manejar el cálculo de ARS a USD
     const handleCalculateUsdFromArs = () => {
         if (!dolarValue || dolarValue <= 0) {
             toast.error('No se pudo obtener un valor de dólar válido para calcular.');
@@ -316,8 +308,7 @@ function ProductFormPage() {
         }
 
         const usdValue = arsValue / dolarValue;
-        // Actualizamos el estado del costo en USD con el valor calculado
-        setCostoSinIva(usdValue.toFixed(4)); // Usamos 4 decimales para mayor precisión
+        setCostoSinIva(usdValue.toFixed(4));
         toast.success(`Costo USD calculado: $${usdValue.toFixed(4)}`);
     };
 
@@ -454,7 +445,6 @@ function ProductFormPage() {
                                 </Grid>
                             )}
 
-                            {/* ✅ 5. Nueva sección para la calculadora, solo visible si no es costo fijo */}
                             {!costoFijo && (
                                 <Grid item xs={12} sm={6}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>

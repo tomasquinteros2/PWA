@@ -9,12 +9,11 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf'; // ✅ 2. Importamos el ícono de PDF
+import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
 import { useState } from 'react';
-import jsPDF from 'jspdf'; // ✅ 3. Importamos la librería jsPDF
-import autoTable from 'jspdf-autotable'; // ✅ 4. Importamos el plugin para tablas
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-// ✅ 5. Importamos la función para buscar productos y el tipo Proveedor
 import { fetchProveedores, deleteProveedor, fetchProducts } from '../api/productsApi';
 import type { Proveedor } from '../types/Producto';
 import { useAuth } from '../hooks/useAuth';
@@ -27,7 +26,6 @@ export default function ProveedorListPage() {
 
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
     const [selectedId, setSelectedId] = useState<number | null>(null);
-    // ✅ 6. Nuevo estado para saber qué PDF se está generando
     const [generatingPdfId, setGeneratingPdfId] = useState<number | null>(null);
 
     const { data: proveedores, error, isLoading } = useQuery<Proveedor[], Error>({
@@ -57,13 +55,11 @@ export default function ProveedorListPage() {
         setSelectedId(null);
     };
 
-    // ✅ 7. Nueva función para generar el PDF
     const handleGeneratePdf = async (proveedor: Proveedor) => {
         setGeneratingPdfId(proveedor.id);
         toast.loading(`Generando lista de precios para ${proveedor.nombre}...`, { id: 'pdf-toast' });
 
         try {
-            // Buscamos todos los productos de este proveedor
             const products = await fetchProducts(undefined, String(proveedor.id));
 
             if (!products || products.length === 0) {
@@ -75,14 +71,12 @@ export default function ProveedorListPage() {
             const docTitle = `Lista de Precios - ${proveedor.nombre}`;
             const generatedDate = `Generado el: ${new Date().toLocaleDateString('es-AR')}`;
 
-            // Título del documento
             doc.setFontSize(18);
             doc.text(docTitle, 14, 22);
             doc.setFontSize(11);
             doc.setTextColor(100);
             doc.text(generatedDate, 14, 29);
 
-            // Crear la tabla con los datos
             autoTable(doc, {
                 startY: 35,
                 head: [['Código', 'Descripción', 'Precio Venta (ARS)']],
@@ -104,7 +98,7 @@ export default function ProveedorListPage() {
             console.error("Error al generar el PDF:", err);
             toast.error('No se pudo generar el PDF.', { id: 'pdf-toast' });
         } finally {
-            setGeneratingPdfId(null); // Reseteamos el estado de carga
+            setGeneratingPdfId(null);
         }
     };
 
@@ -144,7 +138,6 @@ export default function ProveedorListPage() {
                                 <TableCell>{proveedor.id}</TableCell>
                                 <TableCell>{proveedor.nombre}</TableCell>
                                 <TableCell>{proveedor.contacto}</TableCell>
-                                {/* ✅ 9. Celda con el botón para generar el PDF */}
                                 <TableCell align="center">
                                     {generatingPdfId === proveedor.id ? (
                                         <CircularProgress size={24} />

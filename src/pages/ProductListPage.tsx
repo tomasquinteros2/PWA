@@ -422,7 +422,6 @@ function ProductListPage() {
                                             <>
                                                 <TableCell align="right">
                                                     {isCostoFijo ? (
-                                                        // ✅ MEJORA: Usando float para un posicionamiento más directo.
                                                         <Box sx={{ float: 'right' }}>
                                                             <Tooltip title="Este producto tiene un costo fijo en ARS">
                                                                 <Chip label="Fijo ARS" size="small" variant="outlined" />

@@ -9,7 +9,6 @@ import { fetchDolar, forceDolarUpdate, type Dolar } from '../api/dolarApi';
 export default function DolarDisplay() {
     const queryClient = useQueryClient();
 
-    // 1. Query para obtener el valor (sin cambios)
     const { data, isLoading, isError, error } = useQuery<Dolar[]>({
         queryKey: ['dolar'],
         queryFn: fetchDolar,
@@ -18,28 +17,23 @@ export default function DolarDisplay() {
         refetchOnWindowFocus: true,
     });
 
-    // 2. ✅ NUEVO: Mutación para forzar la actualización
     const forceUpdateMutation = useMutation({
         mutationFn: forceDolarUpdate,
         onSuccess: (data) => {
             toast.success(data.message || 'Solicitud de actualización enviada.');
-            // Después de que el backend confirma, invalidamos la query actual
-            // para que React Query la vuelva a buscar automáticamente.
             setTimeout(() => {
                 queryClient.invalidateQueries({ queryKey: ['dolar'] });
-            }, 1000); // Pequeño delay para dar tiempo al backend a procesar
+            }, 1000);
         },
         onError: (error) => {
             toast.error(`Error al forzar la actualización: ${error.message}`);
         },
     });
 
-    // Estados de carga y error de la query (sin cambios)
     if (isLoading) {
         return <Skeleton variant="rounded" width={100} height={32} sx={{ bgcolor: 'grey.700' }} />;
     }
     if (isError) {
-        // ... (código de error sin cambios)
         return (
             <Tooltip title={`Error de red: ${error.message}`}>
                 <Chip
@@ -56,9 +50,7 @@ export default function DolarDisplay() {
     const dolarValue = data?.[0]?.precio;
     const dolarNombre = data?.[0]?.nombre || "Valor del Dólar Actual";
 
-    // Verificación de valor válido (sin cambios)
     if (typeof dolarValue !== 'number' || dolarValue <= 0) {
-        // ... (código de valor no válido sin cambios)
         return (
             <Tooltip title="No se pudo obtener un valor de dólar válido desde el servidor.">
                 <Chip
@@ -76,7 +68,6 @@ export default function DolarDisplay() {
         currency: 'ARS',
     }).format(dolarValue);
 
-    // 3. ✅ NUEVO: JSX que incluye el botón de refrescar
     return (
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
             <Tooltip title={dolarNombre}>
@@ -88,7 +79,6 @@ export default function DolarDisplay() {
                 />
             </Tooltip>
             <Tooltip title="Forzar Actualización">
-                {/* El botón se deshabilita mientras la mutación está en proceso */}
                 <IconButton
                     size="small"
                     onClick={() => forceUpdateMutation.mutate()}
