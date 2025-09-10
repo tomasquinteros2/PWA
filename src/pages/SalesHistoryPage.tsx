@@ -11,7 +11,6 @@ import type { Venta, VentaItem } from '../types/Venta';
 import { toast } from 'react-hot-toast';
 
 function SalesHistoryPage() {
-    // Query para obtener la lista de ventas recientes
     const { data: ventas, error, isLoading } = useQuery<Venta[], Error>({
         queryKey: ['ventas'],
         queryFn: fetchVentas,
@@ -20,7 +19,6 @@ function SalesHistoryPage() {
     const [selectedVenta, setSelectedVenta] = useState<Venta | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
-    // Mutación para buscar un comprobante por número en el servidor (la "nube")
     const searchCloudMutation = useMutation<Venta, Error, string>({
         mutationFn: fetchVentaByNumero,
         onSuccess: (data) => {
@@ -39,7 +37,6 @@ function SalesHistoryPage() {
             return;
         }
 
-        // 1. Buscar primero en los datos locales (ventas recientes cacheadas)
         const ventaLocal = ventas?.find(v => v.numeroComprobante.toLowerCase() === numeroBuscado.toLowerCase());
 
         if (ventaLocal) {
@@ -48,12 +45,10 @@ function SalesHistoryPage() {
             return;
         }
 
-        // 2. Si no se encuentra y estamos online, buscar en la "nube"
         if (onlineManager.isOnline()) {
             toast.loading(`Buscando "${numeroBuscado}" en el archivo histórico...`, { id: 'search-toast' });
             searchCloudMutation.mutate(numeroBuscado);
         } else {
-            // 3. Si no se encuentra y estamos offline, informar al usuario
             toast.error('Comprobante no encontrado en datos locales. Se necesita conexión para buscar en el histórico.');
         }
     };
@@ -65,21 +60,14 @@ function SalesHistoryPage() {
     const formatCurrency = (value: number) =>
         new Intl.NumberFormat('es-AR', { style: 'currency', currency: 'ARS' }).format(value);
 
-    // --- GUARDAS DE RENDERIZADO ---
-
-    // 1. Primera guarda: Muestra un spinner mientras carga por primera vez.
     if (isLoading) {
         return <Box display="flex" justifyContent="center" alignItems="center" minHeight="80vh"><CircularProgress /></Box>;
     }
 
-    // 2. Segunda guarda: Muestra un error si la API falló de forma crítica.
     if (error) {
         return <Container sx={{ mt: 4 }}><Alert severity="error">Error al cargar el historial de ventas: {error.message}</Alert></Container>;
     }
 
-    // ✅ 3. TERCERA GUARDA (LA MÁS IMPORTANTE):
-    // Nos aseguramos de que 'ventas' sea definitivamente un array antes de continuar.
-    // Si no lo es, no renderizamos la tabla para evitar el crash.
     if (!Array.isArray(ventas)) {
         console.error("Error inesperado: 'ventas' no es un array. Datos recibidos:", ventas);
         return <Container sx={{ mt: 4 }}><Alert severity="warning">Los datos de ventas no se pudieron procesar. Intente recargar la página.</Alert></Container>;
@@ -145,7 +133,6 @@ function SalesHistoryPage() {
                 </Table>
             </TableContainer>
 
-            {/* Diálogo de Detalles de la Venta */}
             <Dialog open={Boolean(selectedVenta)} onClose={handleCloseDetails} fullWidth maxWidth="sm">
                 <DialogTitle>Detalles de la Venta</DialogTitle>
                 <DialogContent>

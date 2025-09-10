@@ -22,10 +22,11 @@ import AddShoppingCartIcon from '@mui/icons-material/AddShoppingCart';
 import InfoIcon from '@mui/icons-material/Info';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import PictureAsPdfIcon from '@mui/icons-material/PictureAsPdf';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import { AddCircle } from "@mui/icons-material";
 
 import { fetchProducts, fetchProveedores, fetchTiposProducto, deleteProduct, fetchRelatedProducts } from '../api/productsApi';
-import type { Producto, RelatedProductResult } from '../types/Producto';
+import type { Producto, RelatedProductResult, TipoProducto } from '../types/Producto';
 import { useCart } from '../context/CartProvider';
 import { useAuth } from '../hooks/useAuth';
 import BulkUploadDialog from '../components/BulkUploadDialog';
@@ -44,6 +45,71 @@ function useDebounce<T>(value: T, delay: number): T {
     return debouncedValue;
 }
 
+const escapeCsvField = (field: string | number | null | undefined): string => {
+    if (field === null || field === undefined) {
+        return '';
+    }
+    const stringField = String(field);
+    if (/[",\n]/.test(stringField)) {
+        return `"${stringField.replace(/"/g, '""')}"`;
+    }
+    return stringField;
+};
+
+const generateProductsCSV = (products: Producto[], tipos: TipoProducto[]): string => {
+    const tipoMap = new Map(tipos.map(t => [t.id, t.nombre]));
+
+    const groupedProducts = products.reduce((acc, product) => {
+        const tipoId = product.tipoProductoId;
+        if (!acc[tipoId]) {
+            acc[tipoId] = [];
+        }
+        acc[tipoId].push(product);
+        return acc;
+    }, {} as Record<number, Producto[]>);
+
+    const header = 'CODIGO,IVA,DESCRIPCION,PUBLICO,RES,S/RED,US,%GAN,FECHA ING,COSTO US,US S/IVA\n';
+    let csvContent = header;
+
+    for (const tipoId in groupedProducts) {
+        const tipoNombre = tipoMap.get(Number(tipoId)) || 'Rubro Desconocido';
+        csvContent += `,,${escapeCsvField(tipoNombre)},,,,,,,,,\n`;
+
+        groupedProducts[tipoId].forEach(p => {
+            const row = [
+                escapeCsvField(p.codigo_producto),
+                (p.iva + 1).toFixed(2), // Formato 1.21
+                escapeCsvField(p.descripcion),
+                p.precio_publico?.toFixed(2) ?? '',
+                p.resto ?? '',
+                p.precio_sin_redondear?.toFixed(2) ?? '',
+                p.precio_publico_us?.toFixed(3) ?? '',
+                p.porcentaje_ganancia?.toFixed(2) ?? '',
+                new Date(p.fecha_ingreso).toLocaleDateString('es-AR'),
+                p.costo_dolares?.toFixed(2) ?? '',
+                p.precio_sin_iva?.toFixed(2) ?? ''
+            ].join(',');
+            csvContent += row + '\n';
+        });
+        csvContent += ',,,,,,,,,,,\n';
+    }
+
+    return csvContent;
+};
+
+const downloadCSV = (csvContent: string, fileName: string) => {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', fileName);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+};
+
+
 function ProductListPage() {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
@@ -60,6 +126,7 @@ function ProductListPage() {
 
     const [selectedProducts, setSelectedProducts] = useState(new Set<number | string>());
     const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+    const [isExportingCsv, setIsExportingCsv] = useState(false);
 
     const { data: products, error, isLoading, isFetching } = useQuery<Producto[], Error, Producto[]>({
         queryKey: ['products', debouncedSearchTerm, proveedorFilter, tipoFilter],
@@ -115,6 +182,31 @@ function ProductListPage() {
     useEffect(() => {
         searchInputRef.current?.focus();
     }, []);
+
+    const handleExportToCSV = async () => {
+        setIsExportingCsv(true);
+        toast.loading('Generando archivo de respaldo...', { id: 'csv-export-toast' });
+
+        try {
+            const allProducts = await queryClient.fetchQuery<Producto[]>({ queryKey: ['products'], queryFn: () => fetchProducts() });
+            const allTipos = await queryClient.fetchQuery<TipoProducto[]>({ queryKey: ['tiposProducto'], queryFn: fetchTiposProducto });
+
+            if (!allProducts || allProducts.length === 0) {
+                toast.error('No hay productos para exportar.', { id: 'csv-export-toast' });
+                return;
+            }
+
+            const csvData = generateProductsCSV(allProducts, allTipos);
+            downloadCSV(csvData, 'backup_productos.csv');
+
+            toast.success('Respaldo CSV generado con éxito.', { id: 'csv-export-toast' });
+        } catch (err) {
+            console.error("Error al generar el CSV:", err);
+            toast.error('No se pudo generar el archivo de respaldo.', { id: 'csv-export-toast' });
+        } finally {
+            setIsExportingCsv(false);
+        }
+    };
 
     const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (event.target.checked) {
@@ -292,7 +384,15 @@ function ProductListPage() {
                     Gestión de Productos
                 </Typography>
                 {isAdmin && (
-                    <Box sx={{ display: 'flex', gap: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        <Button
+                            variant="outlined"
+                            startIcon={isExportingCsv ? <CircularProgress size={20} /> : <FileDownloadIcon />}
+                            onClick={handleExportToCSV}
+                            disabled={isExportingCsv}
+                        >
+                            Exportar a CSV
+                        </Button>
                         <Button
                             variant="outlined"
                             startIcon={<UploadFileIcon />}
@@ -422,7 +522,6 @@ function ProductListPage() {
                                             <>
                                                 <TableCell align="right">
                                                     {isCostoFijo ? (
-                                                        // ✅ MEJORA: Usando float para un posicionamiento más directo.
                                                         <Box sx={{ float: 'right' }}>
                                                             <Tooltip title="Este producto tiene un costo fijo en ARS">
                                                                 <Chip label="Fijo ARS" size="small" variant="outlined" />

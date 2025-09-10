@@ -10,7 +10,7 @@ export interface TipoProducto {
 }
 
 export interface Producto {
-    id: number | string; // Permitimos string para IDs optimistas
+    id: number | string;
     codigo_producto: string;
     descripcion: string;
     cantidad: number;

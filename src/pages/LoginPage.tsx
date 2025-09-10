@@ -8,13 +8,11 @@ import {
 } from '@mui/material';
 import { jwtDecode } from 'jwt-decode';
 import { toast } from 'react-hot-toast';
-// ✅ 1. Importamos la función y tipos centralizados
 import { loginUser, type LoginPayload, type LoginResponse } from '../api/AuthApi';
 
 function LoginPage() {
     const navigate = useNavigate();
     const { login } = useAuth();
-    // ✅ 2. Estado unificado para el formulario
     const [credentials, setCredentials] = useState({
         username: '',
         password: '',
@@ -36,7 +34,6 @@ function LoginPage() {
             const isNetworkError = error.message.includes('Network Error') || error.message.includes('Failed to fetch');
 
             if (isNetworkError) {
-                // Lógica offline (ya estaba bien, solo la adaptamos)
                 toast.loading('Sin conexión. Intentando restaurar sesión local...', { id: 'offline-login' });
                 const token = localStorage.getItem('authToken');
                 if (!token) {
@@ -56,8 +53,6 @@ function LoginPage() {
                     toast.error('Tu sesión guardada es inválida. Conéctate para iniciar una nueva.', { id: 'offline-login' });
                 }
             } else {
-                // Para otros errores (401, 403, etc.), el interceptor de apiClient ya se encarga.
-                // Aquí mostramos un mensaje genérico.
                 toast.error('Usuario o contraseña incorrectos.');
             }
         },

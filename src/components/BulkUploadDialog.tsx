@@ -1,5 +1,3 @@
-// src/components/BulkUploadDialog.tsx
-
 import { useState, useCallback } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import Papa from 'papaparse';
@@ -12,8 +10,7 @@ import {
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 
-// Importamos la nueva función 'createTipoProducto'
-import { bulkUploadProducts, fetchProveedores, fetchTiposProducto, createTipoProducto, type ProductPayload } from '../api/productsApi';
+import { bulkUploadProducts, fetchProveedores, fetchTiposProducto, createBulkTiposProducto, type ProductPayload } from '../api/productsApi';
 import type { Proveedor, TipoProducto } from '../types/Producto';
 import CreateProveedorDialog from './CreateProveedorDialog';
 
@@ -38,7 +35,6 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
     const [parsingErrors, setParsingErrors] = useState<string[]>([]);
     const [selectedProveedorId, setSelectedProveedorId] = useState<number | ''>('');
     const [isCreateProveedorOpen, setIsCreateProveedorOpen] = useState(false);
-    // Estado de carga para el proceso de parseo y creación de rubros
     const [isProcessing, setIsProcessing] = useState(false);
 
     const { data: proveedores, isLoading: isLoadingProveedores } = useQuery<Proveedor[]>({ queryKey: ['proveedores'], queryFn: fetchProveedores });
@@ -56,9 +52,15 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
         },
     });
 
-    // Mutación para crear nuevos rubros
-    const createTipoMutation = useMutation({
-        mutationFn: createTipoProducto,
+    const createBulkTiposMutation = useMutation({
+        mutationFn: createBulkTiposProducto,
+        onSuccess: () => {
+            toast.success('¡Nuevos rubros creados con éxito!', { id: 'creating-rubros' });
+            return queryClient.invalidateQueries({ queryKey: ['tiposProducto'] });
+        },
+        onError: (error) => {
+            toast.error(`Error al crear rubros: ${error.message}`, { id: 'creating-rubros' });
+        }
     });
 
     const resetState = () => {
@@ -106,7 +108,6 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
         setParsingErrors([]);
 
         try {
-            // PASO A: Leer el archivo para identificar todos los rubros necesarios
             const parsedData = await new Promise<CsvRow[]>((resolve, reject) => {
                 Papa.parse<CsvRow>(fileToParse, {
                     header: true,
@@ -124,40 +125,19 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
                 }
             });
 
-            // PASO B: Identificar los rubros que no existen
             const missingRubroNames = [...requiredRubroNames].filter(name => !existingRubroNames.has(name.toLowerCase()));
 
             if (missingRubroNames.length > 0) {
                 toast.loading(`Creando ${missingRubroNames.length} nuevo(s) rubro(s)...`, { id: 'creating-rubros' });
-
-                // ✅ MEJORA: Usamos Promise.allSettled para manejar fallos individuales
-                const creationResults = await Promise.allSettled(
-                    missingRubroNames.map(name => createTipoMutation.mutateAsync({ nombre: name }))
-                );
-
-                const failedCreations = creationResults.filter(r => r.status === 'rejected') as PromiseRejectedResult[];
-
-                if (failedCreations.length > 0) {
-                    // Si hubo errores, los mostramos y detenemos el proceso
-                    const errorMessages = failedCreations.map(fail => `  • No se pudo crear el rubro: ${(fail.reason as Error).message}`);
-                    setParsingErrors(prev => [...prev, "Falló la creación de algunos rubros:", ...errorMessages]);
-                    toast.error('Algunos rubros no se pudieron crear. Revise los errores.', { id: 'creating-rubros' });
-                    setIsProcessing(false); // Detenemos el spinner
-                    return; // Detenemos la ejecución
-                }
-
-                toast.success('¡Nuevos rubros creados con éxito!', { id: 'creating-rubros' });
-
-                // PASO C: Refrescar la lista de rubros para obtener los nuevos IDs
-                await queryClient.refetchQueries({ queryKey: ['tiposProducto'] });
+                const newRubrosPayload = missingRubroNames.map(nombre => ({ nombre }));
+                await createBulkTiposMutation.mutateAsync(newRubrosPayload);
             }
 
-            // PASO D: Construir el payload final con todos los IDs correctos
-            const finalTiposProducto = queryClient.getQueryData<TipoProducto[]>(['tiposProducto']) || [];
+            const finalTiposProducto = await queryClient.ensureQueryData<TipoProducto[]>({ queryKey: ['tiposProducto'] });
             const tipoProductoMap = new Map(finalTiposProducto.map(t => [t.nombre.toLowerCase(), t.id]));
             let currentTipoProductoName = '';
             const newProducts: ProductPayload[] = [];
-            const localErrors: string[] = []; // Usamos una variable local para no sobreescribir los errores de creación
+            const localErrors: string[] = [];
 
             parsedData.forEach((row, index) => {
                 const lineNumber = index + 2;
@@ -169,7 +149,7 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
 
                 const tipoProductoId = tipoProductoMap.get(currentTipoProductoName.toLowerCase());
                 if (!tipoProductoId) {
-                    localErrors.push(`Línea ${lineNumber}: Error inesperado al buscar el rubro "${currentTipoProductoName}".`);
+                    localErrors.push(`Línea ${lineNumber}: Error inesperado, no se encontró el rubro "${currentTipoProductoName}" después de la creación.`);
                     return;
                 }
 
@@ -179,6 +159,7 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
                 const porcentaje_ganancia = parseFloat(row['%GAN']) || 30;
                 const iva = (parseFloat(row.IVA) || 1.21) - 1;
                 const resto = row.RES ? parseInt(row.RES, 10) : null;
+                const costoFijo = false;
 
                 if (!codigo_producto || !descripcion) {
                     localErrors.push(`Línea ${lineNumber}: Faltan código o descripción.`);
@@ -194,19 +175,21 @@ export default function BulkUploadDialog({ open, onClose }: BulkUploadDialogProp
                     tipoProductoId: tipoProductoId,
                     porcentaje_ganancia,
                     iva,
-                    resto
+                    resto,
+                    costoFijo,
+                    costo_pesos: 0,
                 });
             });
 
             setProductsToUpload(newProducts);
-            setParsingErrors(prev => [...prev, ...localErrors]); // Añadimos los nuevos errores si los hay
+            setParsingErrors(localErrors);
 
         } catch (error) {
             toast.error(`Ocurrió un error al procesar el archivo: ${(error as Error).message}`);
         } finally {
             setIsProcessing(false);
         }
-    }, [selectedProveedorId, tiposProducto, queryClient, createTipoMutation]);
+    }, [selectedProveedorId, tiposProducto, queryClient, createBulkTiposMutation]);
 
     const handleUpload = () => {
         if (productsToUpload.length > 0) {

@@ -28,8 +28,6 @@ export default function ProveedorFormPage() {
         }
     }, [proveedorToEdit]);
 
-    // ✅ 2. Especifica los tipos para useMutation
-    // <TData, TError, TVariables, TContext>
     const mutation = useMutation<Proveedor, Error, ProveedorPayload>({
         mutationFn: (payload: ProveedorPayload) =>
             isEditMode ? updateProveedor({ id: id!, payload }) : createProveedor(payload),
@@ -43,7 +41,6 @@ export default function ProveedorFormPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        // ✅ 3. Ahora `mutate` sabe que espera un ProveedorPayload
         mutation.mutate({ nombre, contacto });
     };
 

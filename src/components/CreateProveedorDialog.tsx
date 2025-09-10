@@ -11,7 +11,6 @@ import type { Proveedor } from '../types/Producto';
 
 interface CreateProveedorDialogProps {
     open: boolean;
-    // Callback que se ejecuta al cerrar, devolviendo el nuevo proveedor si se creó
     onClose: (newProveedor?: Proveedor) => void;
 }
 

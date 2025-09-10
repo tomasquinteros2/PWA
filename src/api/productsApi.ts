@@ -93,7 +93,10 @@ export const createTipoProducto = async (tipoProducto: TipoProductoPayload): Pro
     const { data } = await apiClient.post('/tipo-producto/tiposproducto', tipoProducto);
     return data;
 };
-
+export const createBulkTiposProducto = async (tiposProducto: TipoProductoPayload[]): Promise<TipoProducto[]> => {
+    const { data } = await apiClient.post('/tipo-producto/tiposproducto/bulk', tiposProducto);
+    return data;
+};
 export const fetchTipoProductoById = async (id: string): Promise<TipoProducto> => {
     const { data } = await apiClient.get(`/tipo-producto/tiposproducto/${id}`);
     return data;

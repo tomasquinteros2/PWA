@@ -1,7 +1,6 @@
 import {
     Box, Button, Divider, Drawer, IconButton, List, ListItem,
     ListItemText, Typography, TextField, Tooltip, CircularProgress,
-    // Añadimos los componentes para el diálogo de confirmación
     Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
@@ -13,7 +12,6 @@ import { useMutation, useQueryClient, onlineManager } from '@tanstack/react-quer
 import { registrarVenta } from '../api/salesApi';
 import type { Venta } from '../types/Venta';
 import type { Producto } from '../types/Producto';
-// Importamos el componente del comprobante que se mostrará al final
 import ReceiptModal from './ReceiptModal';
 
 interface CartDrawerProps {
@@ -29,7 +27,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
     const { cartItems, removeFromCart, updateQuantity, clearCart } = useCart();
     const queryClient = useQueryClient();
 
-    // --- Estados para controlar los diálogos ---
     const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
     const [completedVenta, setCompletedVenta] = useState<Venta | null>(null);
 
@@ -58,11 +55,8 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
             return { previousProducts };
         },
         onSuccess: (data) => {
-            // Actualizamos el toast de carga a éxito
             toast.success(`Venta N° ${data.numeroComprobante} registrada.`, { id: 'venta-toast' });
-            // Guardamos la venta completada para mostrar el modal del comprobante
             setCompletedVenta(data);
-            // Limpiamos el carrito y cerramos el drawer para una experiencia fluida
             clearCart();
             onClose();
         },
@@ -80,9 +74,7 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
         },
     });
 
-    // --- Handlers para el nuevo flujo ---
 
-    // 1. Abre el diálogo de confirmación
     const handleOpenConfirmDialog = () => {
         if (cartItems.length === 0) {
             toast.error("El carrito está vacío.");
@@ -91,12 +83,9 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
         setIsConfirmDialogOpen(true);
     };
 
-    // 2. Se ejecuta al confirmar la venta en el diálogo
     const handleConfirmCheckout = () => {
         setIsConfirmDialogOpen(false);
-        // Muestra un toast de carga que será actualizado en onSuccess/onError
         toast.loading("Procesando venta...", { id: 'venta-toast' });
-        // Ejecuta la mutación
         ventaMutation.mutate(cartItems);
     };
 
@@ -158,7 +147,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </Box>
             </Drawer>
 
-            {/* --- DIÁLOGO DE CONFIRMACIÓN DE VENTA --- */}
             <Dialog
                 open={isConfirmDialogOpen}
                 onClose={() => setIsConfirmDialogOpen(false)}
@@ -177,7 +165,6 @@ export default function CartDrawer({ open, onClose }: CartDrawerProps) {
                 </DialogActions>
             </Dialog>
 
-            {/* --- MODAL DEL COMPROBANTE DE VENTA --- */}
             <ReceiptModal
                 open={Boolean(completedVenta)}
                 onClose={() => setCompletedVenta(null)}

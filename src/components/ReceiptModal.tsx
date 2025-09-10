@@ -216,7 +216,7 @@ export default function ReceiptModal({ open, onClose, venta }: ReceiptModalProps
                 PaperProps={{
                     sx: {
                         overflow: 'visible',
-                        bgcolor: '#fff' // Fondo blanco para el diálogo
+                        bgcolor: '#fff'
                     }
                 }}
             >

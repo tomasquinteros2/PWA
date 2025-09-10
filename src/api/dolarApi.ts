@@ -1,6 +1,5 @@
 import apiClient from './apiClient';
 
-// 1. Definimos la estructura del objeto Dolar que viene en el array.
 export interface Dolar {
     id: number;
     nombre: string;

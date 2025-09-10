@@ -8,7 +8,6 @@ interface VentaPayloadItem {
     cantidad: number;
 }
 
-// Función para registrar la venta (sin cambios)
 export const registrarVenta = async (cartItems: CartItem[]): Promise<Venta> => {
     const payload: VentaPayloadItem[] = cartItems.map(item => ({
         id: item.product.id as number,
