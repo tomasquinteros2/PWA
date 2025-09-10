@@ -79,7 +79,6 @@ function SalesHistoryPage() {
                 Historial de Ventas
             </Typography>
 
-            {/* Barra de Búsqueda */}
             <Paper component="form" onSubmit={handleSearchSubmit} sx={{ p: 2, mb: 3, display: 'flex', gap: 2 }}>
                 <TextField
                     fullWidth
@@ -110,7 +109,6 @@ function SalesHistoryPage() {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {/* Ahora esta línea es 100% segura */}
                         {ventas.length > 0 ? (
                             ventas.map((venta) => (
                                 <TableRow key={venta.id} hover>

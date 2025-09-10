@@ -22,7 +22,7 @@ export default function CreateProveedorDialog({ open, onClose }: CreateProveedor
         mutationFn: createProveedor,
         onSuccess: (data) => {
             toast.success(`Proveedor "${data.nombre}" creado con éxito.`);
-            onClose(data); // Cierra el diálogo y devuelve el proveedor recién creado
+            onClose(data);
         },
         onError: (error) => {
             toast.error(`No se pudo crear el proveedor: ${error.message}`);
